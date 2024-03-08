@@ -1,0 +1,91 @@
+
+//+------------------------------------------------------------------+
+//|                                                     SLC.mq5      |
+//|                        Copyright 2021, Forex Robot Easy Team     |
+//|                                              forexroboteasy.com  |
+//+------------------------------------------------------------------+
+
+//+------------------------------------------------------------------+
+//|                                                                  |
+//|                        Simple Local Copier                        |
+//|                                                                  |
+//+------------------------------------------------------------------+
+
+//+------------------------------------------------------------------+
+//|                                                                  |
+//|                            Global Variables                       |
+//|                                                                  |
+//+------------------------------------------------------------------+
+input double LotMultiplier = 1.0; // Lot multiplier for trade size customization
+
+//+------------------------------------------------------------------+
+//|                                                                  |
+//|                            Expert Advisor                         |
+//|                                                                  |
+//+------------------------------------------------------------------+
+int OnInit()
+{
+    // Connect to the master account
+    if (!AccountInfoInteger(ACCOUNT_SERVER))
+    {
+        Print('Error: Unable to connect to the master account');
+        return INIT_FAILED;
+    }
+
+    // Connect to the slave account
+    if (!AccountInfoInteger(ACCOUNT_LOGIN))
+    {
+        Print('Error: Unable to connect to the slave account');
+        return INIT_FAILED;
+    }
+
+    return INIT_SUCCEEDED;
+}
+
+void OnTick()
+{
+    // Get the current trade size from the master account
+    double masterLotSize = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_CONTRACT_SIZE) * MarketInfo(_Symbol, MODE_LOTSIZE);
+
+    // Calculate the trade size for the slave account
+    double slaveLotSize = masterLotSize * LotMultiplier;
+
+    // Copy the trade from the master account to the slave account
+    if (OrderSend(_Symbol, OP_BUY, masterLotSize, Ask, 0, 0, 0, 'SLC'))
+    {
+        Print('Trade copied successfully to the slave account');
+    }
+    else
+    {
+        Print('Error copying trade to the slave account: ', GetLastError());
+    }
+}
+
+//+------------------------------------------------------------------+
+//|                                                                  |
+//|                          Custom Functions                         |
+//|                                                                  |
+//+------------------------------------------------------------------+
+void SetLotMultiplier(double multiplier)
+{
+    LotMultiplier = multiplier;
+    Print('Lot multiplier set to: ', LotMultiplier);
+}
+
+//+------------------------------------------------------------------+
+//|                                                                  |
+//|                            Program Start                          |
+//|                                                                  |
+//+------------------------------------------------------------------+
+void OnStart()
+{
+    // Set the lot multiplier to 2.0
+    SetLotMultiplier(2.0);
+
+    // Run the copier indefinitely
+    while (!IsStopped())
+    {
+        OnTick();
+        Sleep(1000); // Wait for 1 second before copying the next trade
+    }
+}
